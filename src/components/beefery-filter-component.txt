@@ -1,0 +1,211 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  MapPin, 
+  DollarSign, 
+  Star, 
+  Clock,
+  Sandwich,
+  ThermometerSun,
+  Calendar
+} from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+
+const BeeferyFilters = ({ onFilterChange }) => {
+  const [filters, setFilters] = useState({
+    location: '',
+    radius: 25,
+    minRating: 0,
+    maxPrice: 30,
+    criteria: [],
+    sortBy: 'rating',
+    sortOrder: 'desc'
+  });
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState('');
+
+  useEffect(() => {
+    // Get user's location when component mounts
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setLocationError('');
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          setLocationError('Could not get your location');
+        }
+      );
+    }
+  }, []);
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
+  const toggleCriteria = (criterion) => {
+    const newCriteria = filters.criteria.includes(criterion)
+      ? filters.criteria.filter(c => c !== criterion)
+      : [...filters.criteria, criterion];
+    
+    handleFilterChange('criteria', newCriteria);
+  };
+
+  const useCurrentLocation = () => {
+    if (userLocation) {
+      handleFilterChange('location', `${userLocation.lat},${userLocation.lng}`);
+    }
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardContent className="p-6 space-y-6">
+        {/* Location Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-foreground flex items-center">
+            <MapPin className="h-5 w-5 mr-2 text-primary" />
+            Location
+          </h3>
+          
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Enter location..."
+              value={filters.location}
+              onChange={(e) => handleFilterChange('location', e.target.value)}
+              className="w-full p-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            
+            <button
+              onClick={useCurrentLocation}
+              className="text-sm text-primary hover:text-primary/90"
+              disabled={!userLocation}
+            >
+              Use my current location
+            </button>
+            
+            {locationError && (
+              <p className="text-sm text-red-500">{locationError}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Search radius: {filters.radius} miles</label>
+            <Slider
+              defaultValue={[filters.radius]}
+              max={50}
+              step={5}
+              onValueChange={(value) => handleFilterChange('radius', value[0])}
+            />
+          </div>
+        </div>
+
+        {/* Rating & Price Section */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <h3 className="font-semibold text-foreground flex items-center">
+              <Star className="h-5 w-5 mr-2 text-primary" />
+              Minimum Rating
+            </h3>
+            <Slider
+              defaultValue={[filters.minRating]}
+              max={10}
+              step={0.5}
+              onValueChange={(value) => handleFilterChange('minRating', value[0])}
+            />
+            <span className="text-sm text-muted-foreground">{filters.minRating.toFixed(1)}+</span>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-semibold text-foreground flex items-center">
+              <DollarSign className="h-5 w-5 mr-2 text-primary" />
+              Maximum Price
+            </h3>
+            <Slider
+              defaultValue={[filters.maxPrice]}
+              max={50}
+              step={5}
+              onValueChange={(value) => handleFilterChange('maxPrice', value[0])}
+            />
+            <span className="text-sm text-muted-foreground">Up to ${filters.maxPrice}</span>
+          </div>
+        </div>
+
+        {/* Criteria Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-foreground">Additional Criteria</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: 'freshPinkWarm', icon: ThermometerSun, label: 'Fresh, Pink & Warm' },
+              { id: 'noDayOldBeef', icon: Calendar, label: 'No Day-Old Beef' },
+              { id: 'goodRatio', icon: Sandwich, label: 'Good Beef-to-Bun Ratio' }
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => toggleCriteria(id)}
+                className={`flex items-center p-3 rounded-lg border transition-colors ${
+                  filters.criteria.includes(id)
+                    ? 'border-primary bg-purple-50 text-purple-700'
+                    : 'border-border hover:border-purple-200 hover:bg-purple-50/50'
+                }`}
+              >
+                <Icon className="h-5 w-5 mr-2" />
+                <span className="text-sm">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sort Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-foreground">Sort By</h3>
+          <div className="flex space-x-3">
+            {[
+              { id: 'rating', icon: Star, label: 'Rating' },
+              { id: 'price', icon: DollarSign, label: 'Price' },
+              { id: 'date', icon: Clock, label: 'Latest Reviews' }
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  if (filters.sortBy === id) {
+                    handleFilterChange('sortOrder', 
+                      filters.sortOrder === 'desc' ? 'asc' : 'desc'
+                    );
+                  } else {
+                    handleFilterChange('sortBy', id);
+                    handleFilterChange('sortOrder', 'desc');
+                  }
+                }}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  filters.sortBy === id
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary text-muted-foreground hover:bg-border'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+                {filters.sortBy === id && (
+                  <span className="text-sm">
+                    {filters.sortOrder === 'desc' ? '↓' : '↑'}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default BeeferyFilters;

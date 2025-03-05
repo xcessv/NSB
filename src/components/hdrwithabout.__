@@ -1,0 +1,232 @@
+import React, { useState } from 'react';
+import { Bell, X, Menu } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import NotificationIcon from './notifications/NotificationIcon';
+import AboutModal from './AboutModal';
+import config from '../config';
+
+const Header = ({ currentUser, onLogin, onRegister, onLogout }) => {
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showAboutMenu, setShowAboutMenu] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+
+  const AboutMenu = () => (
+    <div className="absolute top-full right-0 mt-2 w-48 bg-card rounded-lg shadow-lg py-1 border z-50">
+      <button 
+        onClick={() => {
+          setShowAboutModal(true);
+          setShowAboutMenu(false);
+        }}
+        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50"
+      >
+        About Us
+      </button>
+      <a 
+        href="/contact"
+        className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50"
+      >
+        Contact
+      </a>
+      {currentUser && (
+        <>
+          <hr className="my-1" />
+          <button
+            onClick={() => {
+              setShowProfileEdit(true);
+              setShowAboutMenu(false);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50"
+          >
+            Edit Profile
+          </button>
+        </>
+      )}
+    </div>
+  );
+
+  const ProfileEditModal = () => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-lg bg-card p-6 relative">
+        <button 
+          onClick={() => setShowProfileEdit(false)}
+          className="absolute top-4 right-4 p-2 hover:bg-secondary rounded-full"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
+        
+        <form className="space-y-4" onSubmit={(e) => {
+          e.preventDefault();
+          // Add your profile update logic here
+          setShowProfileEdit(false);
+        }}>
+          {/* Profile Image */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Profile Image
+            </label>
+            <div className="flex items-center space-x-4">
+              <img
+                src={currentUser?.profileImage || '/images/default-avatar.png'}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover"
+              />
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+              >
+                Change Image
+              </button>
+            </div>
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Display Name
+            </label>
+            <input
+              type="text"
+              defaultValue={currentUser?.displayName}
+              className="w-full p-2 border border-border rounded-lg"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              defaultValue={currentUser?.email}
+              className="w-full p-2 border border-border rounded-lg"
+            />
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Bio
+            </label>
+            <textarea
+              defaultValue={currentUser?.bio}
+              rows={3}
+              className="w-full p-2 border border-border rounded-lg"
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowProfileEdit(false)}
+              className="px-4 py-2 text-muted-foreground hover:bg-secondary rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+
+  return (
+    <header className="bg-card sticky top-0 z-40 border-b shadow-sm">
+      <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo Section */}
+          <div className="flex items-center space-x-3">
+            <img
+              src="/images/logo.png"
+              alt="North Shore Beefs Logo"
+              className="h-10 w-10 object-contain"
+            />
+            <h1 className="text-2xl md:text-3xl font-bold text-primary/90">
+              North Shore Beefs
+            </h1>
+          </div>
+
+          {/* Auth and Menu Section */}
+          <div className="flex items-center space-x-4">
+            {currentUser ? (
+              <div className="flex items-center space-x-4">
+                {/* Notifications */}
+                <NotificationIcon currentUser={currentUser} />
+                
+                {/* User Profile */}
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={currentUser.profileImage 
+                      ? `${config.API_URL}${currentUser.profileImage}`
+                      : '/images/default-avatar.png'
+                    }
+                    alt={currentUser.displayName}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/default-avatar.png';
+                    }}
+                  />
+                  <div className="hidden md:block text-right">
+                    <div className="font-medium text-foreground">
+                      {currentUser.displayName}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      {currentUser.role === 'admin' ? 'Admin' : 'Member'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={onLogout}
+                    className="px-4 py-2 text-sm bg-secondary hover:bg-border rounded-full transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={onLogin}
+                  className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-full transition-colors"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={onRegister}
+                  className="px-4 py-2 text-sm bg-secondary hover:bg-border rounded-full transition-colors"
+                >
+                  Register
+                </button>
+              </div>
+            )}
+            
+            {/* About Menu - Always Visible */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAboutMenu(!showAboutMenu)}
+                className="p-2 hover:bg-secondary rounded-full"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              {showAboutMenu && <AboutMenu />}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showProfileEdit && currentUser && <ProfileEditModal />}
+      {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
+    </header>
+  );
+};
+
+export default Header;

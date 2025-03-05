@@ -1,0 +1,571 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 17% 17%;
+    --foreground: 0 0% 98%;
+    
+    --card: 220 17% 20%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 220 17% 20%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 0 59% 41%;
+    --primary-foreground: 0 0% 98%;
+    
+    --secondary: 220 17% 24%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 220 17% 24%;
+    --muted-foreground: 220 10% 70%;
+    
+    --accent: 220 17% 24%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 220 17% 24%;
+    --input: 220 17% 24%;
+    --ring: 0 59% 41%;
+    
+    --radius: 0.5rem;
+  }
+}
+
+/* Force dark mode */
+:root {
+  color-scheme: dark;
+}
+
+/* Base styles */
+html {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+body {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  min-height: 100vh;
+  margin: 0;
+  min-width: 320px;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Direct element styles */
+.bg-background,
+[class*="bg-white"],
+[class*="bg-slate"] {
+  background-color: #1a1a1a !important;
+}
+
+.bg-card,
+.card,
+[class*="bg-card"] {
+  background-color: #242424 !important;
+}
+
+/* Modal styles */
+.fixed.inset-0.bg-black\/50,
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Button styles */
+.bg-primary,
+.bg-purple-500,
+[class*="bg-primary"],
+[class*="bg-purple-500"] {
+  background-color: #8b0000 !important;
+  color: #ffffff !important;
+}
+
+.hover\:bg-primary:hover,
+.hover\:bg-purple-600:hover,
+[class*="hover:bg-primary"]:hover {
+  background-color: #6b0000 !important;
+}
+
+.bg-secondary,
+.bg-slate-100,
+[class*="bg-secondary"],
+[class*="bg-slate-100"] {
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+.hover\:bg-secondary:hover,
+.hover\:bg-slate-200:hover {
+  background-color: #404040 !important;
+}
+
+/* Text colors */
+.text-foreground,
+.text-slate-900,
+.text-slate-800,
+.text-slate-700 {
+  color: #ffffff !important;
+}
+
+.text-muted-foreground,
+.text-slate-600,
+.text-slate-500 {
+  color: #a0a0a0 !important;
+}
+
+/* Input styles */
+input,
+textarea,
+select {
+  background-color: #333333 !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #a0a0a0 !important;
+}
+
+/* Border colors */
+.border,
+.border-border,
+[class*="border-slate"] {
+  border-color: #333333 !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #242424;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #8b0000;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b0000;
+}
+
+/* Mobile and touch styles */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .touch-pan-x {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+  }
+  
+  .touch-pan-x > * {
+    scroll-snap-align: start;
+  }
+}
+
+@media (hover: none) {
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  button:active {
+    opacity: 0.7;
+  }
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background-color: #1a1a1a !important;
+}
+
+/* Dark mode for map tiles */
+.leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Counter-invert markers and other UI elements to ensure they appear normally */
+.leaflet-marker-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-popup-pane,
+.leaflet-tooltip-pane,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-control {
+  filter: invert(0%);
+}
+
+/* Attribution styling for dark mode */
+.leaflet-control-attribution {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  color: #ffffff !important;
+  padding: 0 5px;
+  border-radius: 4px;
+}
+
+.leaflet-control-attribution a {
+  color: #3b82f6 !important;
+}
+
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+.leaflet-marker-icon {
+  z-index: 1000 !important;
+}
+
+.leaflet-popup {
+  z-index: 1001 !important;
+}
+
+/* Custom Marker and Cluster Styles */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid white;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 14px;
+  color: white;
+}
+
+/* POI marker star styling */
+.custom-poi-marker {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.custom-poi-marker .marker-icon {
+  background-color: #3b82f6 !important; /* Blue */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster-marker {
+  width: 40px;
+  height: 40px;
+  background-color: #8b0000;
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 16px;
+}
+
+.cluster-marker-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.current-location-marker {
+  width: 16px;
+  height: 16px;
+}
+
+/* Current location marker animation */
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+}
+
+.current-location-marker div.absolute {
+  animation: pulse 2s infinite;
+}
+
+/* Highlighted marker for active selection */
+.highlighted-marker .marker-icon {
+  border: 3px solid #fbbf24 !important;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.5);
+}
+
+/* Marker Cluster Plugin Styles */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: rgba(139, 0, 0, 0.6) !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: rgba(139, 0, 0, 0.8) !important;
+  color: white !important;
+}
+
+.marker-cluster {
+  background-color: rgba(139, 0, 0, 0.6) !important;
+  border: 2px solid white;
+}
+
+.marker-cluster div {
+  background-color: rgba(139, 0, 0, 0.8) !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+/* Popup Styles */
+.leaflet-popup-content-wrapper {
+  background-color: #242424 !important;
+  color: #ffffff !important;
+  border-radius: 0.5rem !important;
+  padding: 0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 1rem !important;
+}
+
+.leaflet-popup-tip {
+  background-color: #242424 !important;
+}
+
+.custom-popup .leaflet-popup-content {
+  min-width: 250px;
+}
+
+.map-container {
+  height: calc(100vh - 300px);
+  width: 100%;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+
+/* Map Controls */
+.leaflet-control-zoom {
+  background-color: #333333 !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #404040 !important;
+}
+
+/* Rating slider styling */
+.rating-slider-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ef4444, #f59e0b, #3b82f6, #22c55e);
+}
+
+.rating-slider-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  position: relative;
+  top: -14px;
+  margin-left: -16px;
+}
+
+/* Emoji animation for rating slider */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.emoji-bounce {
+  animation: bounce 0.5s;
+}
+
+/* Image loading animation */
+.image-loading {
+  background: linear-gradient(90deg, #333333, #404040, #333333);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Gradients */
+.bg-gradient-to-r.from-purple-500.to-pink-500,
+.bg-gradient-to-r.from-primary.to-primary\/80 {
+  background-image: linear-gradient(to right, #8b0000, rgba(139, 0, 0, 0.8)) !important;
+}
+
+/* Navigation active states */
+.text-purple-500.bg-purple-50 {
+  color: #8b0000 !important;
+  background-color: rgba(139, 0, 0, 0.1) !important;
+}
+
+/* Additional utility classes */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.liked-button {
+  color: #10b981 !important; /* emerald-600 */
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.liked-button:hover {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+@layer utilities {
+  .emoji-font {
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", 
+                 "Noto Color Emoji", "Android Emoji", sans-serif;
+  }
+}
+
+textarea, input[type="text"] {
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", 
+               "Noto Color Emoji", "Android Emoji", sans-serif;
+}
+
+.emoji-mart {
+  --em-rgb-input: 59, 130, 246;
+  --em-rgb-accent: 37, 99, 235;
+}
+
+@media (max-width: 640px) {
+  .emoji-mart {
+    max-width: 100%;
+    width: 100% !important;
+  }
+  
+  .emoji-mart-scroll {
+    height: 200px !important;
+  }
+  
+  .emoji-picker-mobile {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    width: 100%;
+    z-index: 1000;
+  }
+}
+
+/* PullToRefresh.css */
+.pull-indicator {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: height 0.2s ease-out;
+}
+
+.refresh-indicator-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease-out;
+}
+
+/* Add overscroll behavior for iOS bounce effect */
+.pull-to-refresh-container {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure hardware acceleration for smoother animations */
+.pull-to-refresh-content {
+  will-change: transform;
+}
+
+.pull-to-refresh-loaded {
+  opacity: 0;
+  animation: fade-in 0.3s ease-in forwards;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Refresh indicator animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

@@ -1,0 +1,188 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Upload, Save, User, X, Check } from 'lucide-react';
+import { authService } from '../services/api';
+
+const SettingsScreen = ({ currentUser, onUpdateUser }) => {
+  const [formData, setFormData] = useState({
+    displayName: currentUser?.displayName || '',
+    email: currentUser?.email || '',
+    profileImage: null
+  });
+  const [imagePreview, setImagePreview] = useState(currentUser?.profileImage || '');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        setError('File must be an image');
+        return;
+      }
+
+      setFormData({ ...formData, profileImage: file });
+      setImagePreview(URL.createObjectURL(file));
+      setError('');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Create FormData for the update
+      const submitData = new FormData();
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== null) {
+          submitData.append(key, formData[key]);
+        }
+      });
+
+      const updatedUser = await authService.updateProfile(currentUser.id, submitData);
+      onUpdateUser(updatedUser);
+      setSuccess('Profile updated successfully!');
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError(error.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6">
+      <Card className="bg-card">
+        <CardHeader className="p-6 border-b">
+          <h2 className="text-2xl font-bold text-foreground">Profile Settings</h2>
+          <p className="text-slate-500">Update your profile information</p>
+        </CardHeader>
+        <CardContent className="p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-600">
+              <X className="h-5 w-5 mr-2" />
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-600">
+              <Check className="h-5 w-5 mr-2" />
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Profile Image Section */}
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Profile preview"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-purple-100"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-secondary flex items-center justify-center border-4 border-purple-100">
+                    <User className="w-16 h-16 text-slate-400" />
+                  </div>
+                )}
+                <label className="absolute bottom-0 right-0 bg-primary rounded-full p-3 cursor-pointer hover:bg-primary/90 transition-colors shadow-lg">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <Upload className="h-5 w-5 text-white" />
+                </label>
+              </div>
+              <p className="text-sm text-slate-500">
+                Recommended: Square image, at least 500x500px
+              </p>
+            </div>
+
+            {/* Profile Information */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  name="displayName"
+                  value={formData.displayName}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full p-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={currentUser?.username}
+                  className="w-full p-3 border border-border rounded-lg bg-slate-50 text-slate-500"
+                  disabled
+                />
+                <p className="mt-1 text-sm text-slate-500">
+                  Username cannot be changed
+                </p>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2 bg-primary hover:bg-primary/90 text-white py-3 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Save className="h-5 w-5" />
+              <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
+            </button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default SettingsScreen;

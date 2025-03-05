@@ -1,0 +1,475 @@
+// src/utils/FFmpegMediaCompression.js
+import { isVideo, isGif } from './MediaUtils';
+
+// Dynamic import to prevent errors if FFmpeg isn't available
+let ffmpegModule = null;
+let FFmpeg = null;
+
+// Fallback to basic canvas compression for images
+const compressImage = async (file, options = {}) => {
+  // Skip GIFs - compressing animated GIFs requires specialized libraries
+  if (isGif(file)) {
+    console.log('Skipping GIF compression');
+    return file;
+  }
+  
+  const {
+    maxWidth = 1920,
+    maxHeight = 1080,
+    quality = 0.8,
+    mimeType = file.type
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Create a canvas with the desired dimensions
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.floor(width * ratio);
+        height = Math.floor(height * ratio);
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw image on canvas
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Canvas to Blob conversion failed'));
+          return;
+        }
+        
+        // Create new File object
+        const fileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed" + 
+                        (mimeType === 'image/jpeg' ? '.jpg' : 
+                         mimeType === 'image/png' ? '.png' : '.webp');
+                        
+        const compressedFile = new File(
+          [blob], 
+          fileName,
+          { type: mimeType }
+        );
+        
+        // Add useful properties for debugging
+        compressedFile.originalSize = file.size;
+        compressedFile.compressedSize = blob.size;
+        compressedFile.compressionRatio = (file.size / blob.size).toFixed(2) + 'x';
+        
+        console.log(`Image compressed: ${compressedFile.compressionRatio} reduction, ${(file.size/1024/1024).toFixed(2)}MB → ${(blob.size/1024/1024).toFixed(2)}MB`);
+        
+        resolve(compressedFile);
+      }, mimeType, quality);
+    };
+    
+    img.onerror = () => {
+      reject(new Error('Failed to load image for compression'));
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
+
+// Basic video compression using browser MediaRecorder API
+const basicVideoCompression = async (file, options = {}) => {
+  try {
+    // This is a simplified approach with limited browser support
+    // For production use, consider libraries like FFmpeg.wasm or server-side compression
+    
+    // Check if the MediaRecorder API supports the file's type
+    if (!MediaRecorder.isTypeSupported('video/webm')) {
+      console.warn('Video compression not supported in this browser');
+      return file;
+    }
+    
+    // Create video element to load the file
+    const video = document.createElement('video');
+    video.muted = true;
+    video.autoplay = false;
+    video.playsInline = true;
+    video.srcObject = null;
+    
+    // Default options
+    const {
+      videoWidth = 1280,
+      videoHeight = 720,
+      videoBitrate = 2500000, // 2.5 Mbps
+      audioBitrate = 128000,   // 128 kbps
+      onProgress = () => {}
+    } = options;
+    
+    return new Promise((resolve, reject) => {
+      video.src = URL.createObjectURL(file);
+      
+      video.onloadedmetadata = async () => {
+        try {
+          // Capture the video using a canvas and MediaRecorder
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.min(video.videoWidth, videoWidth);
+          canvas.height = Math.min(video.videoHeight, videoHeight);
+          const ctx = canvas.getContext('2d');
+          
+          const stream = canvas.captureStream();
+          
+          // Configure the MediaRecorder with compression settings
+          const recorderOptions = {
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: videoBitrate,
+            audioBitsPerSecond: audioBitrate
+          };
+          
+          const recorder = new MediaRecorder(stream, recorderOptions);
+          const chunks = [];
+          
+          recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+          
+          recorder.onstop = () => {
+            // Create a new file from the recorded chunks
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const fileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.webm";
+            
+            const compressedFile = new File(
+              [blob], 
+              fileName, 
+              { type: 'video/webm' }
+            );
+            
+            // Add useful properties for debugging
+            compressedFile.originalSize = file.size;
+            compressedFile.compressedSize = blob.size;
+            compressedFile.compressionRatio = (file.size / blob.size).toFixed(2) + 'x';
+            
+            console.log(`Video compressed: ${compressedFile.compressionRatio} reduction, ${(file.size/1024/1024).toFixed(2)}MB → ${(blob.size/1024/1024).toFixed(2)}MB`);
+            
+            // Clean up
+            URL.revokeObjectURL(video.src);
+            stream.getTracks().forEach(track => track.stop());
+            
+            resolve(compressedFile);
+          };
+          
+          // Start recording
+          recorder.start();
+          
+          // Set up progress tracking
+          const duration = video.duration * 1000;
+          let progress = 0;
+          const progressInterval = setInterval(() => {
+            progress += 1;
+            const percent = Math.min(Math.round((progress / duration) * 100), 99);
+            onProgress(percent);
+          }, 100);
+          
+          // Play the video for recording
+          await video.play();
+          
+          // Draw each frame to the canvas
+          const drawFrame = () => {
+            if (video.ended || video.paused) {
+              recorder.stop();
+              clearInterval(progressInterval);
+              onProgress(100);
+              return;
+            }
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(drawFrame);
+          };
+          
+          drawFrame();
+          
+          // Automatically stop after the video duration
+          setTimeout(() => {
+            if (recorder.state === 'recording') {
+              recorder.stop();
+              clearInterval(progressInterval);
+              onProgress(100);
+            }
+          }, video.duration * 1000 + 500); // Add a small buffer
+          
+        } catch (error) {
+          console.error('Video compression error:', error);
+          URL.revokeObjectURL(video.src);
+          // Return original file if compression fails
+          resolve(file);
+        }
+      };
+      
+      video.onerror = (error) => {
+        console.error('Error loading video for compression:', error);
+        URL.revokeObjectURL(video.src);
+        resolve(file); // Return original file on error
+      };
+    });
+  } catch (error) {
+    console.error('Video compression error:', error);
+    return file; // Return original file if compression fails
+  }
+};
+
+// Try to load FFmpeg (but don't fail if it's not available)
+const loadFFmpeg = async () => {
+  try {
+    // Only try to load FFmpeg if we haven't already
+    if (!ffmpegModule) {
+      console.log("Attempting to load FFmpeg dynamically...");
+      
+      // Check for SharedArrayBuffer support (required for FFmpeg WASM)
+      const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+      if (!hasSharedArrayBuffer || !window.crossOriginIsolated) {
+        console.warn('SharedArrayBuffer not available - FFmpeg WASM requires cross-origin isolation');
+        throw new Error('Environment does not support SharedArrayBuffer');
+      }
+      
+      try {
+        // Try to import the modern FFmpeg package 
+        const { FFmpeg: FFmpegClass } = await import('@ffmpeg/ffmpeg');
+        const { fetchFile } = await import('@ffmpeg/util');
+        
+        FFmpeg = FFmpegClass;
+        ffmpegModule = { FFmpeg, fetchFile };
+        console.log("Loaded FFmpeg v6 successfully");
+      } catch (err) {
+        console.warn("Could not load @ffmpeg/ffmpeg (v6), trying legacy version:", err);
+        
+        try {
+          // Try to import the legacy FFmpeg package
+          const { createFFmpeg, fetchFile } = await import('@ffmpeg/ffmpeg');
+          ffmpegModule = { createFFmpeg, fetchFile };
+          console.log("Loaded legacy FFmpeg successfully");
+        } catch (legacyErr) {
+          console.error("Failed to load any FFmpeg version:", legacyErr);
+          throw legacyErr;
+        }
+      }
+    }
+    
+    return ffmpegModule;
+  } catch (error) {
+    console.error('Failed to load FFmpeg:', error);
+    return null;
+  }
+};
+
+// Improved video compression with fallback
+const compressVideo = async (file, options = {}) => {
+  try {
+    // Try to load FFmpeg
+    const ffmpegLib = await loadFFmpeg();
+    
+    // If FFmpeg loading failed, use basic compression
+    if (!ffmpegLib) {
+      console.warn('FFmpeg not available, using basic compression');
+      return basicVideoCompression(file, options);
+    }
+    
+    // Default options
+    const {
+      preset = 'medium', // Options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+      crf = 23,          // Constant Rate Factor (0-51): lower means better quality, 18-28 is reasonable
+      scale = '1280:720', // Output resolution, use -1 to keep aspect ratio
+      bitrate = '2M',     // Target bitrate, e.g., 2M = 2 Mbps
+      audioCodec = 'aac', // Audio codec
+      audioBitrate = '128k', // Audio bitrate
+      onProgress = () => {} // Progress callback
+    } = options;
+    
+    // Check which FFmpeg version we're using (modern v6+ or legacy)
+    if (ffmpegLib.FFmpeg) {
+      // Modern FFmpeg API (v6+)
+      const ffmpeg = new ffmpegLib.FFmpeg();
+      
+      // Set up progress handling
+      ffmpeg.on('progress', (progress) => {
+        const percent = Math.round(progress.progress * 100);
+        onProgress(percent);
+      });
+      
+      await ffmpeg.load();
+      
+      // Write file to FFmpeg's virtual file system
+      const inputFileName = `input-${Date.now()}.mp4`;
+      const outputFileName = `output-${Date.now()}.mp4`;
+      
+      await ffmpeg.writeFile(inputFileName, await ffmpegLib.fetchFile(file));
+      
+      // Build FFmpeg command
+      await ffmpeg.exec([
+        '-i', inputFileName,
+        '-c:v', 'libx264',   // Video codec
+        '-preset', preset,
+        '-crf', crf.toString(),
+        '-vf', `scale=${scale}`,
+        '-b:v', bitrate,
+        '-c:a', audioCodec,
+        '-b:a', audioBitrate,
+        '-movflags', '+faststart', // For web streaming
+        '-pix_fmt', 'yuv420p',    // Required by some browsers
+        outputFileName
+      ]);
+      
+      // Read the output file
+      const outputData = await ffmpeg.readFile(outputFileName);
+      
+      // Create a new File object
+      const newFileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.mp4";
+      const compressedFile = new File(
+        [outputData.buffer], 
+        newFileName,
+        { type: 'video/mp4' }
+      );
+      
+      // Add useful properties
+      compressedFile.originalSize = file.size;
+      compressedFile.compressedSize = outputData.byteLength;
+      compressedFile.compressionRatio = (file.size / outputData.byteLength).toFixed(2) + 'x';
+      
+      console.log(`Video compressed: ${compressedFile.compressionRatio} reduction, ${(file.size/1024/1024).toFixed(2)}MB → ${(outputData.byteLength/1024/1024).toFixed(2)}MB`);
+      
+      // Clean up
+      await ffmpeg.deleteFile(inputFileName);
+      await ffmpeg.deleteFile(outputFileName);
+      
+      return compressedFile;
+    } else {
+      // Legacy FFmpeg API
+      const { createFFmpeg, fetchFile } = ffmpegLib;
+      const ffmpeg = createFFmpeg({
+        log: false, // Set to true for debugging
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js',
+      });
+      
+      await ffmpeg.load();
+      
+      // Input file name should be unique to avoid conflicts
+      const inputFileName = `input-${Date.now()}-${file.name}`;
+      const outputFileName = `output-${Date.now()}.mp4`;
+      
+      // Start progress tracking
+      let lastProgress = 0;
+      
+      ffmpeg.setProgress(({ ratio }) => {
+        const percent = Math.round(ratio * 100);
+        if (percent > lastProgress) {
+          lastProgress = percent;
+          onProgress(percent);
+        }
+      });
+      
+      // Write file to FFmpeg's virtual file system
+      ffmpeg.FS('writeFile', inputFileName, await fetchFile(file));
+      
+      // Build FFmpeg command
+      const ffmpegArgs = [
+        '-i', inputFileName,
+        '-c:v', 'libx264',   // Video codec
+        '-preset', preset,
+        '-crf', crf.toString(),
+        '-vf', `scale=${scale}`,
+        '-b:v', bitrate,
+        '-c:a', audioCodec,
+        '-b:a', audioBitrate,
+        '-movflags', '+faststart', // For web streaming
+        '-pix_fmt', 'yuv420p',    // Required by some browsers
+        outputFileName
+      ];
+      
+      // Run FFmpeg command
+      await ffmpeg.run(...ffmpegArgs);
+      
+      // Read the output file from the virtual file system
+      const outputData = ffmpeg.FS('readFile', outputFileName);
+      
+      // Create a new File object from the compressed video
+      const newFileName = file.name.replace(/\.[^/.]+$/, "") + "_compressed.mp4";
+      
+      const compressedFile = new File(
+        [outputData.buffer], 
+        newFileName,
+        { type: 'video/mp4' }
+      );
+      
+      // Add useful properties for debugging
+      compressedFile.originalSize = file.size;
+      compressedFile.compressedSize = outputData.length;
+      compressedFile.compressionRatio = (file.size / outputData.length).toFixed(2) + 'x';
+      
+      console.log(`Video compressed: ${compressedFile.compressionRatio} reduction, ${(file.size/1024/1024).toFixed(2)}MB → ${(outputData.length/1024/1024).toFixed(2)}MB`);
+      
+      // Clean up files from virtual file system
+      ffmpeg.FS('unlink', inputFileName);
+      ffmpeg.FS('unlink', outputFileName);
+      
+      return compressedFile;
+    }
+    
+  } catch (error) {
+    console.error('FFmpeg video compression error:', error);
+    console.warn('Falling back to basic video compression');
+    // Fall back to basic compression if FFmpeg fails
+    return basicVideoCompression(file, options);
+  }
+};
+
+/**
+ * Compresses any media file based on its type
+ * 
+ * @param {File} file - The media file to compress
+ * @param {Object} options - Compression options
+ * @returns {Promise<File>} Compressed file
+ */
+const compressMedia = async (file, options = {}) => {
+  if (!file) return null;
+  
+  try {
+    // Skip if file is small enough already
+    const skipThreshold = options.skipThreshold || 1024 * 1024; // 1MB default
+    if (file.size < skipThreshold) {
+      console.log('File size below threshold, skipping compression');
+      return file;
+    }
+    
+    // Compress based on file type
+    if (file.type.startsWith('image/')) {
+      return await compressImage(file, options);
+    } else if (file.type.startsWith('video/')) {
+      return await compressVideo(file, options);
+    }
+    
+    // Return original for unsupported types
+    return file;
+    
+  } catch (error) {
+    console.error('Media compression error:', error);
+    return file; // Return original file if compression fails
+  }
+};
+
+// Also export as default for backward compatibility
+export {
+  compressImage,
+  compressVideo,
+  compressMedia,
+  loadFFmpeg,
+  basicVideoCompression
+};
+
+export default {
+  compressImage,
+  compressVideo,
+  compressMedia,
+  loadFFmpeg
+};
